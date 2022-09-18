@@ -1,9 +1,10 @@
 import screeninfo
 import tkinter as tk
-import subprocess
+from executors import linux_exec, windows_exec
+import platform
 
 class Display():
-    def __init__(self, window, canvas, rectangle, name="", x = "", y = "", width_mm = None, height_mm = None):
+    def __init__(self, window, canvas, rectangle, name="", x = "", y = ""):
         self.window = window
         self.canvas = canvas
         self.rectangle = rectangle
@@ -11,8 +12,6 @@ class Display():
         self.name = name
         self.x = x
         self.y = y
-        self.width_mm = width_mm
-        self.height_mm = height_mm
 
     # get the average between the rectangle top y and bottom y coordinates
     def adjusted_y(self):
@@ -23,16 +22,35 @@ class Main(tk.Tk):
     def __init__(self, monitors, line_width):
         super().__init__()
         self.displays = []
+        if platform.system() == "Windows":
+            self.executor = windows_exec
+        elif platform.system() == "Linux":
+            self.executor = linux_exec
+        else:
+            raise Exception("Unsupported platform. This tool only supports Windows and Linux")
+
+        line_height = min([m.height for m in monitors])
+        self.initialize_displays(monitors, line_height, line_width)
+
+        tk.Label(self.displays[-1].canvas, 
+                 text="Press <Ctrl-S> to save and <Escape> to quit", 
+                 font=(None, 50)
+                ).place(x=1, y=1)
+        self.withdraw()
+
+    def initialize_displays(self, monitors, line_height, line_width):
+        print(monitors)
         for m in monitors:
             window = tk.Toplevel()
             window.geometry("{}x{}+{}+{}".format(m.width, m.height, m.x, m.y))
-            window.attributes("-fullscreen", True)
+            window.state("zoomed")
+            #window.attributes("-fullscreen", True)
 
             c = tk.Canvas(window, width=m.width, height=m.height)
             r = c.create_rectangle(0, 
-                                   (m.height - line_width) / 2, 
+                                   (line_height - line_width) / 2, 
                                    m.width, 
-                                   (m.height + line_width) / 2, 
+                                   (line_height + line_width) / 2, 
                                    fill="black")
 
             c.bind("<Button-1>", lambda e: self.on_click(e), add="+")
@@ -45,17 +63,8 @@ class Main(tk.Tk):
                               r,
                               name=m.name,
                               x=m.x,
-                              y=m.y,
-                              width_mm=m.width_mm,
-                              height_mm=m.height_mm)
+                              y=m.y)
             self.displays.append(display)
-        tk.Label(c, text="Press <Ctrl-S> to save and <Escape> to quit", font=(None, 50)).place(x=1, y=1)
-        self.withdraw()
-
-    # initialize monitors to be at the same location from the top
-    def init_monitors(self, monitors):
-        for m in monitors:
-            subprocess.run("xrandr --output {} --pos {}x{}".format(m.name, m.x, 0).split(" "))
 
     def on_click(self, e):
         # Get the currently focused canvas
@@ -83,7 +92,7 @@ class Main(tk.Tk):
     def save(self, e, c):
         # Initialize first display to y=0
         d = self.displays[0]
-        subprocess.run("xrandr --output {} --pos {}x{}".format(d.name, d.x, 0).split(" "))
+        self.executor(d.name, d.x, 0)
 
         # Setup all displays
         for i in range(1, len(self.displays)):
@@ -92,9 +101,8 @@ class Main(tk.Tk):
             tk.Label(c, text=calc, font=(None, 50)).place(x=1, y=151) # show new y
 
             d = self.displays[i]
-
             # set second display relatively to the first display
-            subprocess.run("xrandr --output {} --pos {}x{}".format(d.name, d.x, calc).split(" "))
+            self.executor(d.name, d.x, calc)
 
     # Get the canvas associated with a certain Toplevel object
     def get_canvas_by_window(self, window):
