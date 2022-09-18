@@ -22,6 +22,3 @@ def windows_exec(name, x=0, y=0):
     devmode.Fields = win32con.DM_POSITION
 
     win32api.ChangeDisplaySettingsEx(name, devmode, 0)
-
-if __name__ == "__main__":
-    windows_exec("\\\\.\\DISPLAY1", 1920, 0)

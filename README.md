@@ -1,3 +1,3 @@
 # auto-display-position
 Automatically position your displays  
-currently only works on Linux using xrandr
+currently works with Linux using xrandr, and with Windows using Win32API
