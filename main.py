@@ -43,8 +43,11 @@ class Main(tk.Tk):
         for m in monitors:
             window = tk.Toplevel()
             window.geometry("{}x{}+{}+{}".format(m.width, m.height, m.x, m.y))
-            window.state("zoomed")
-            #window.attributes("-fullscreen", True)
+            
+            if platform.system() == "Windows":
+                window.state("zoomed")
+            else:
+                window.attributes("-fullscreen", True)
 
             c = tk.Canvas(window, width=m.width, height=m.height)
             r = c.create_rectangle(0, 
